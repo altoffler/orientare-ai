@@ -3,8 +3,11 @@ from google import genai
 from google.genai import types
 import pypdf
 import sqlite3
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-# Importăm modulele create de noi anterior
+# Importăm modulele create anterior
 from database import init_db, salveaza_utilizator, extrage_istoric
 from pdf_generator import genereaza_pdf_raport
 
@@ -15,6 +18,50 @@ init_db()
 if "raport_final" not in st.session_state:
     st.session_state.raport_final = None
 
+def trimite_email_mostra(email_destinatar, nume_client, text_mostra):
+    """Trimite automat e-mailul DOAR cu mostra gratuită și instrucțiunile de plată."""
+    try:
+        email_sursa = st.secrets["EMAIL_EXPEDITOR"]
+        parola_sursa = st.secrets["EMAIL_PAROLA"]
+        
+        msg = MIMEMultipart()
+        msg['From'] = email_sursa
+        msg['To'] = email_destinatar
+        msg['Subject'] = f"🎓 Confirmare Profil Vocațional AI - {nume_client}"
+        
+        corp_mesaj = f"""Bună ziua, {nume_client},
+
+Îți mulțumim că ai folosit Orientatorul Profesional Inteligent! Datele tale au fost procesate cu succes.
+
+Iată prima parte a analizei tale (Mostra Gratuită):
+--------------------------------------------------
+{text_mostra}
+--------------------------------------------------
+
+🔒 RESTUL RAPORTULUI TĂU ESTE SALVAT ȘI BLOCAT ÎN SISTEM
+
+Pentru a debloca secțiunile „Top 3 Meserii de Viitor Sigure”, „Planul de Acțiune pe 6 luni” și pentru a primi Raportul Oficial complet în format PDF direct pe email/WhatsApp, trimite o contribuție de doar 25 RON:
+
+• Varianta 1 (Revolut): Trimite 25 RON în contul Revolut la numărul 07XX-XXX-XXX. La detalii plată scrie obligatoriu numele tău din aplicație.
+• Varianta 2 (PayPal): Trimite echivalentul în contul PayPal la adresa: email_sotie@gmail.com.
+
+Imediat ce plata este recepționată, un psihosociolog din echipa noastră îți va trimite documentul PDF complet în maximum 15-30 de minute!
+
+Cu respect,
+Echipa Orientare AI
+"""
+        msg.attach(MIMEText(corp_mesaj, 'plain'))
+        
+        server = smtplib.SMTP('://gmail.com', 587)
+        server.starttls()
+        server.login(email_sursa, parola_sursa)
+        server.sendmail(email_sursa, email_destinatar, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        st.error(f"Eroare la trimiterea e-mailului de confirmare: {e}")
+        return False
+
 # Configurația Interfeței Grafice
 st.set_page_config(page_title="Orientare Profesională AI", page_icon="🎓", layout="centered")
 
@@ -22,7 +69,6 @@ st.title("🎓 Orientator Profesional Inteligent")
 st.subheader("Descoperă-ți vocația pentru era viitorului (AI & AGI)")
 st.write("Încarcă diplomele sau desenele tale, iar AI-ul nostru te va ghida spre cariera ideală.")
 
-# 1. Datele utilizatorului (Formular completat de client)
 nume = st.text_input("Numele tău complet:")
 email = st.text_input("Adresa ta de Email (pentru livrarea PDF-ului):")
 telefon = st.text_input("Numărul tău de Telefon / WhatsApp (pentru livrare rapidă):")
@@ -32,14 +78,12 @@ descriere = st.text_area("Povestește-ne despre tine (ce pasiuni ai, ce îți pl
 diploma_file = st.file_uploader("Încarcă o diplomă sau eseu (PDF, TXT):", type=["pdf", "txt"])
 desen_file = st.file_uploader("Încarcă un desen, schiță sau proiect vizual (JPG, PNG):", type=["jpg", "jpeg", "png"])
 
-# 2. Logica la apăsarea butonului de generare
 if st.button("Generează Profilul de Carieră 🚀"):
     if not nume or not email or not telefon or not descriere:
-        st.warning("Te rog să completezi toate câmpurile obligatorii: nume, email, telefon și descrierea personală.")
+        st.warning("Te rog să completezi toate câmpurile obligatorii.")
     else:
         with st.spinner("Psihosociologul AI îți analizează portofoliul..."):
             try:
-                # Citim cheia API direct din seiful serverului (Streamlit Secrets)
                 api_key_ascunsa = st.secrets["GEMINI_API_KEY"]
                 client = genai.Client(api_key=api_key_ascunsa)
                 
@@ -77,62 +121,62 @@ if st.button("Generează Profilul de Carieră 🚀"):
                 )
                 
                 st.session_state.raport_final = response.text
-                # Salvăm automat totul în baza de date locală actualizată
                 salveaza_utilizator(nume, email, telefon, varsta, descriere, response.text)
-                st.success("Analiza a fost generată cu succes!")
+                
+                # Extragem mostra text pentru e-mail
+                linii = response.text.split('\n')
+                mostra_text = []
+                for l in linii:
+                    mostra_text.append(l)
+                    if "2." in l or "Top 3" in l:
+                        mostra_text.pop()
+                        break
+                text_pentru_email = "\n".join(mostra_text)
+                
+                # TRIMITEM DOAR MOSTRA PE EMAIL (FĂRĂ PDF ATASAT!)
+                trimite_email_mostra(email, nume, text_pentru_email)
+                st.success("✅ Analiza inițială a fost finalizată, iar mostra gratuită a fost trimisă pe email!")
                 
             except Exception as e:
                 st.error(f"Eroare tehnică la procesarea AI: {e}")
 
-# 3. STRATEGIA DE MONETIZARE (Ce vede utilizatorul pe ecran)
+# Afișarea pe ecran (Paywall-ul comercial)
 if st.session_state.raport_final:
     st.markdown("---")
-    
-    # Împărțim textul primit de la AI pentru a-i arăta doar prima parte (Mostra gratuită)
     linii_raport = st.session_state.raport_final.split('\n')
     mostra_gratuita = []
-    
-    # Extragem doar liniile care aparțin primei secțiuni (Analiza Psihosociologică)
     for linie in linii_raport:
         mostra_gratuita.append(linie)
         if "2." in linie or "Top 3" in linie or "Meserii" in linie:
-            mostra_gratuita.pop() # Ne oprim exact înainte de secțiunea 2
+            mostra_gratuita.pop()
             break
             
-    # Afișăm pe ecran DOAR mostra gratuită
     st.markdown("### 🧠 Mostră Gratuită: Analiza Psihologică a Profilului Tău")
     st.write("\n".join(mostra_gratuita))
     
-    # BLOCAJUL VIZUAL NATIV (Paywall-ul comercial automat)
     st.markdown("---")
     st.warning("🔒 RESTUL RAPORTULUI ESTE BLOCAT")
     st.info(
         "Pentru a debloca Top 3 Meserii de Viitor Sigure adaptate profilului tău, "
         "Planul de Acțiune pe 6 luni și pentru a descărca Raportul Oficial complet în format PDF, "
-        "trimite o contribuție de doar 25 RON prin una dintre metodele de mai jos:\n\n"
-        "• Varianta 1 (Revolut): Trimite 25 RON în contul Revolut la numărul de telefon al soției tale.\n"
-        "• Varianta 2 (PayPal): Trimite echivalentul în contul PayPal la adresa de email a soției tale.\n\n"
-        "Cum primești PDF-ul: Imediat ce vedem notificarea ta de plată, îți vom trimite Raportul PDF complet "
-        "direct pe adresa de Email sau pe WhatsApp-ul introduse în formular, în maximum 15-30 de minute!"
+        "trimite o contribuție de doar 25 RON prin:\n\n"
+        "• Varianta 1 (Revolut): Trimite 25 RON în contul Revolut la numărul 0736-932-363.\n"
+        "• Varianta 2 (PayPal): Trimite echivalentul în contul PayPal la adresa: anadanieladobre@gmail.com.\n\n"
+        "Cum primești PDF-ul: Imediat ce vedem notificarea de plată, îți vom trimite Raportul PDF complet "
+        "direct pe Email sau WhatsApp în maximum 15-30 de minute!"
     )
 
-# 4. Zona Admin: Pentru ca TU să poți extrage contactele și PDF-urile plătite
+# Panoul Admin (Rămâne singurul loc de unde se poate genera PDF-ul complet)
 st.markdown("---")
 st.markdown("### 🗄️ Panou Administrativ (Doar pentru tine)")
 if st.checkbox("Accesează baza de date pentru a trimite PDF-urile plătite"):
     cod_acces = st.text_input("Introdu codul tău de administrator:", type="password")
-    if cod_acces == "GigiAdmin2026": # Parola ta secretă de admin
+    if cod_acces == "orientareAI26":
         st.write("Istoricul complet al rapoartelor generate de clienți:")
-        
-        # Extragem datele complete din tabelul actualizat
         randuri = extrage_istoric()
-        
         if randuri:
             for r in randuri:
-                # r[0]=id, r[1]=nume, r[2]=email, r[3]=telefon, r[4]=varsta, r[5]=data_creare
                 with st.expander(f"Candidat: {r[1]} | Email: {r[2]} | Tel: {r[3]} | Data: {r[5]}"):
-                    
-                    # Conectare rapidă locală pentru a prelua textul complet generat de AI din rândul respectiv
                     conn = sqlite3.connect("orientare_cariera.db")
                     cursor = conn.cursor()
                     cursor.execute("SELECT descriere, raport_ai FROM utilizatori WHERE id = ?", (r[0],))
@@ -140,19 +184,15 @@ if st.checkbox("Accesează baza de date pentru a trimite PDF-urile plătite"):
                     conn.close()
                     
                     if date_detaliate:
-                        st.text("Descriere utilizator:")
-                        st.write(date_detaliate[0])
-                        st.text("Raport Complet generat de AI (Meserii + Plan):")
+                        st.text("Raport Complet existent în baza de date:")
                         st.write(date_detaliate[1])
                         
-                        # Generăm PDF-ul pe loc în panoul de admin, preluat din baza de date
+                        # AICI generezi tu PDF-ul complet doar când vrei să-l trimiți clientului plătitor
                         pdf_bytes_admin = genereaza_pdf_raport(r[1], r[4], date_detaliate[1])
                         st.download_button(
-                            label=f"📥 Descarcă PDF-ul complet pentru {r[1]}",
+                            label=f"📥 Descarcă PDF complet pentru {r[1]}",
                             data=bytes(pdf_bytes_admin),
-                            file_name=f"Raport_{r[1].replace(' ', '_')}.pdf",
+                            file_name=f"Raport_Complet_{r[1].replace(' ', '_')}.pdf",
                             mime="application/pdf",
                             key=f"btn_{r[0]}"
                         )
-        else:
-            st.info("Baza de date este goală momentan.")
