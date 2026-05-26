@@ -2,56 +2,49 @@ import streamlit as st
 from google import genai
 from google.genai import types
 import pypdf
+import sqlite3
 
-# Importăm modulele create de noi în sarcinile anterioare
+# Importăm modulele create de noi anterior
 from database import init_db, salveaza_utilizator, extrage_istoric
 from pdf_generator import genereaza_pdf_raport
 
 # Pornim baza de date SQLite locală
 init_db()
 
-# Inițializăm starea sesiunii pentru a păstra raportul pe ecran
+# Inițializăm starea sesiunii
 if "raport_final" not in st.session_state:
     st.session_state.raport_final = None
 
-# 1. Configurația Interfeței Grafice
+# Configurația Interfeței Grafice
 st.set_page_config(page_title="Orientare Profesională AI", page_icon="🎓", layout="centered")
 
 st.title("🎓 Orientator Profesional Inteligent")
 st.subheader("Descoperă-ți vocația pentru era viitorului (AI & AGI)")
 st.write("Încarcă diplomele sau desenele tale, iar AI-ul nostru te va ghida spre cariera ideală.")
 
-# 2. Căsuța pentru Cheia API Google Gemini
-api_key = st.text_input("Introdu Cheia ta Google Gemini API:", type="password", 
-                       help="Obține o cheie gratuită din Google AI Studio.")
-
-# 3. Formularul de date al utilizatorului
+# 1. Datele utilizatorului
 nume = st.text_input("Numele tău complet:")
 varsta = st.number_input("Vârsta:", min_value=10, max_value=100, value=18)
 descriere = st.text_area("Povestește-ne despre tine (ce pasiuni ai, ce îți place să faci, ce urăști):")
 
-# Căsuțele de încărcare fișiere (Multimodal)
 diploma_file = st.file_uploader("Încarcă o diplomă sau eseu (PDF, TXT):", type=["pdf", "txt"])
 desen_file = st.file_uploader("Încarcă un desen, schiță sau proiect vizual (JPG, PNG):", type=["jpg", "jpeg", "png"])
 
-# 4. Logica la apăsarea butonului de generare
+# 2. Logica la apăsarea butonului de generare
 if st.button("Generează Profilul de Carieră 🚀"):
-    if not api_key:
-        st.error("Te rog să introduci cheia API pentru a porni creierul AI.")
-    elif not nume or not descriere:
+    if not nume or not descriere:
         st.warning("Te rog să completezi cel puțin numele și descrierea personală.")
     else:
-        with st.spinner("Psihosociologul AI îți analizează portofoliul și salvează datele..."):
+        with st.spinner("Psihosociologul AI îți analizează portofoliul..."):
             try:
-                # Conectarea oficială la noul API Google GenAI
-                client = genai.Client(api_key=api_key)
-                continut_prompt = []
+                # Citim cheia API direct din seiful serverului (Streamlit Secrets)
+                api_key_ascunsa = st.secrets["GEMINI_API_KEY"]
+                client = genai.Client(api_key=api_key_ascunsa)
                 
-                # Adăugăm datele text în lista trimisă la AI
+                continut_prompt = []
                 date_text = f"PROFIL UTILIZATOR:\nNume: {nume}\nVârstă: {varsta}\nDescriere: {descriere}"
                 continut_prompt.append(date_text)
                 
-                # Dacă există un fișier încărcat, extragem textul inteligent
                 if diploma_file:
                     if diploma_file.name.endswith(".pdf"):
                         reader = pypdf.PdfReader(diploma_file)
@@ -60,68 +53,97 @@ if st.button("Generează Profilul de Carieră 🚀"):
                             text_diploma += page.extract_text() + "\n"
                     else:
                         text_diploma = diploma_file.read().decode("utf-8", errors="ignore")
-                    
                     continut_prompt.append(f"\nDOCUMENT TEXT ATAȘAT:\n{text_diploma}")
                 
-                # Dacă există o imagine (desen), o trimitem ca Part brut către Gemini
                 if desen_file:
                     bytes_imagine = desen_file.read()
-                    part_imagine = types.Part.from_bytes(
-                        data=bytes_imagine,
-                        mime_type=desen_file.type
-                    )
+                    part_imagine = types.Part.from_bytes(data=bytes_imagine, mime_type=desen_file.type)
                     continut_prompt.append(part_imagine)
                 
-                # Promptul tău de sistem ca psihosociolog, optimizat pentru PDF (fără diacritice speciale)
                 prompt_sistem = """
                 Comportă-te ca un psihosociolog de elită și expert în orientare vocațională pentru era AGI.
-                Analizează profilul și fișierele atașate. Generază un raport structurat în limba română (folosește formatare curată):
+                Analizează profilul și fișierele atașate. Generază un raport structurat în limba română, fără diacritice speciale:
                 1. Analiza Psihosociologică a Profilului (Personalitate, puncte forte reflectate în desene/text)
                 2. Top 3 Meserii de Viitor Sigure (Explicații clare de ce i se potrivesc în era AI)
                 3. Plan de Acțiune pe 6 luni (Pași practici de dezvoltare de abilități umane și tehnice)
-                
-                Notă importantă pentru compatibilitatea PDF: Înlocuiește diacriticele speciale (ș, ț, ă, î, â) cu litere standard (s, t, a, i, a) sau combinații clare în textul final pentru a evita erorile de compilare.
                 """
                 continut_prompt.append(f"\nINSTRUCTIUNE CRITICĂ: {prompt_sistem}")
 
-                # Apelăm modelul stabil de înaltă performanță Gemini 2.5 Flash
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=continut_prompt
                 )
                 
-                # Salvăm rezultatul în sesiune și în baza de date locală SQLite
                 st.session_state.raport_final = response.text
+                # Salvăm automat totul în baza de date locală
                 salveaza_utilizator(nume, varsta, descriere, response.text)
-                st.success("Raportul a fost generat și salvat local în baza de date!")
                 
             except Exception as e:
                 st.error(f"Eroare tehnică la procesarea AI: {e}")
 
-# 5. Afișarea raportului și activarea butonului de descărcare PDF
+# 3. STRATEGIA DE MONETIZARE (Ce vede utilizatorul pe ecran)
 if st.session_state.raport_final:
     st.markdown("---")
-    st.markdown(st.session_state.raport_final)
-    st.markdown("---")
+    st.success("Analiza inițială a fost finalizată cu succes!")
     
-    # Generăm PDF-ul folosind modulul nostru secundar
-    pdf_bytes = genereaza_pdf_raport(nume, varsta, st.session_state.raport_final)
+    # Împărțim textul primit de la AI pentru a-i arăta doar prima parte (Mostra gratuită)
+    linii_raport = st.session_state.raport_final.split('\n')
+    mostra_gratuita = []
     
-    # Butonul de descărcare
-    st.download_button(
-        label="📥 Descarcă Raportul în format PDF",
-        data=bytes(pdf_bytes),
-        file_name=f"Raport_Carieră_{nume.replace(' ', '_')}.pdf",
-        mime="application/pdf"
-    )
+    # Extragem doar liniile care aparțin primei secțiuni (Analiza Psihosociologică)
+    for linie in linii_raport:
+        mostra_gratuita.append(linie)
+        if "2." in linie or "Top 3" in linie or "Meserii" in linie:
+            mostra_gratuita.pop() # Ne oprim exact înainte de secțiunea 2
+            break
+            
+    # Afișăm pe ecran DOAR mostra gratuită
+    st.markdown("### 🧠 Mostră Gratuită: Analiza Psihologică a Profilului Tău")
+    st.write("\n".join(mostra_gratuita))
+    
+    # BLOCAJUL VIZUAL (Paywall-ul comercial)
+    st.markdown("""
+    <div style="background-color:#fff3cd; padding:20px; border-radius:10px; border-left: 6px solid #ffc107; margin-top:20px;">
+        <h4 style="color:#856404; margin-top:0;">🔒 RESTUL RAPORTULUI ESTE BLOCAT</h4>
+        <p style="color:#856404;">Pentru a debloca <b>Top 3 Meserii de Viitor Sigure</b> adaptate profilului tău, <b>Planul de Acțiune pe 6 luni</b> și pentru a descărca <b>Raportul Oficial complet în format PDF</b>, trimite o contribuție de doar <b>25 RON</b> prin una dintre metodele de mai jos:</p>
+        <ul>
+            <li><b>Varianta 1 (Revolut):</b> Trimite 25 RON în contul Revolut la numărul <code>07XX-XXX-XXX</code>. La detalii plată scrie obligatoriu numele tău din aplicație.</li>
+            <li><b>Varianta 2 (PayPal):</b> Trimite echivalentul în contul PayPal la adresa: <code>email_sotie@gmail.com</code>.</li>
+        </ul>
+        <p style="color:#856404; margin-bottom:0;"><b>Cum primești PDF-ul:</b> Imediat ce plata este recepționată, îți vom trimite Raportul PDF complet direct pe adresa ta de email sau WhatsApp în maximum 15-30 de minute! Datele tale sunt salvate în siguranță în sistem.</p>
+    </div>
+    """, unsafe_allowed_html=True)
 
-# 6. Zona Admin: Vizualizarea istoricului din baza de date
+# 4. Zona Admin: Pentru ca TU să poți extrage PDF-urile plătite
 st.markdown("---")
-st.markdown("### 🗄️ Panou Administrativ (Local)")
-if st.checkbox("Afișează istoricul utilizatorilor salvați"):
-    randuri = extrage_istoric()
-    if randuri:
-        for r in randuri:
-            st.write(f"**ID: {r[0]}** | Nume: {r[1]} ({r[2]} ani) | Data: {r[3]}")
-    else:
-        st.info("Baza de date este goală momentan.")
+st.markdown("### 🗄️ Panou Administrativ (Doar pentru tine)")
+if st.checkbox("Accesează baza de date pentru a trimite PDF-urile plătite"):
+    cod_acces = st.text_input("Introdu codul tău de administrator:", type="password")
+    if cod_acces == "parola_ta_secreta": # Modifică parola cu una proprie
+        st.write("Istoricul complet al rapoartelor generate:")
+        
+        conn = sqlite3.connect("orientare_cariera.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nume, varsta, descriere, raport_ai, data_creare FROM utilizatori ORDER BY id DESC")
+        randuri = cursor.fetchall()
+        conn.close()
+        
+        if randuri:
+            for r in randuri:
+                with st.expander(f"Candidat: {r[1]} ({r[2]} ani) - Data: {r[5]}"):
+                    st.text("Descriere utilizator:")
+                    st.write(r[3])
+                    st.text("Raport Complet generat de AI:")
+                    st.write(r[4])
+                    
+                    # Generăm PDF-ul pe loc în panoul tău de admin
+                    pdf_bytes_admin = genereaza_pdf_raport(r[1], r[2], r[4])
+                    st.download_button(
+                        label=f"📥 Descarcă PDF-ul pentru {r[1]}",
+                        data=bytes(pdf_bytes_admin),
+                        file_name=f"Raport_{r[1].replace(' ', '_')}.pdf",
+                        mime="application/pdf",
+                        key=f"btn_{r[0]}"
+                    )
+        else:
+            st.info("Baza de date este goală momentan.")
