@@ -27,7 +27,7 @@ nume = st.text_input("Numele tău complet:")
 varsta = st.number_input("Vârsta:", min_value=10, max_value=100, value=18)
 descriere = st.text_area("Povestește-ne despre tine (ce pasiuni ai, ce îți place să faci, ce urăști):")
 
-diploma_file = st.file_uploader("Încarcă o diplomă sau eseu (PDF, TXT):", type=["pdf", "txt"])
+diploma_file = st.file_uploader("Încarcă o diploma sau eseu (PDF, TXT):", type=["pdf", "txt"])
 desen_file = st.file_uploader("Încarcă un desen, schiță sau proiect vizual (JPG, PNG):", type=["jpg", "jpeg", "png"])
 
 # 2. Logica la apăsarea butonului de generare
@@ -81,7 +81,7 @@ if st.button("Generează Profilul de Carieră 🚀"):
             except Exception as e:
                 st.error(f"Eroare tehnică la procesarea AI: {e}")
 
-# 3. STRATEGIA DE MONETIZARE (Ce vede utilizatorul pe ecran)
+# 3. STRATEGIA DE MONETIZARE (Nativă și stabilă)
 if st.session_state.raport_final:
     st.markdown("---")
     st.success("Analiza inițială a fost finalizată cu succes!")
@@ -101,25 +101,25 @@ if st.session_state.raport_final:
     st.markdown("### 🧠 Mostră Gratuită: Analiza Psihologică a Profilului Tău")
     st.write("\n".join(mostra_gratuita))
     
-    # BLOCAJUL VIZUAL (Paywall-ul comercial)
-    st.markdown("""
-    <div style="background-color:#fff3cd; padding:20px; border-radius:10px; border-left: 6px solid #ffc107; margin-top:20px;">
-        <h4 style="color:#856404; margin-top:0;">🔒 RESTUL RAPORTULUI ESTE BLOCAT</h4>
-        <p style="color:#856404;">Pour a debloca <b>Top 3 Meserii de Viitor Sigure</b> adaptate profilului tău, <b>Planul de Acțiune pe 6 luni</b> și pentru a descărca <b>Raportul Oficial complet în format PDF</b>, trimite o contribuție de doar <b>25 RON</b> prin una dintre metodele de mai jos:</p>
-        <ul>
-            <li><b>Varianta 1 (Revolut):</b> Trimite 25 RON în contul Revolut la numărul <code>07XX-XXX-XXX</code>. La detalii plată scrie obligatoriu numele tău din aplicație.</li>
-            <li><b>Varianta 2 (PayPal):</b> Trimite echivalentul în contul PayPal la adresa: <code>email_sotie@gmail.com</code>.</li>
-        </ul>
-        <p style="color:#856404; margin-bottom:0;"><b>Cum primești PDF-ul:</b> Imediat ce plata este recepționată, îți vom trimite Raportul PDF complet direct pe adresa ta de email sau WhatsApp în maximum 15-30 de minute! Datele tale sunt salvate în siguranță în sistem.</p>
-    </div>
-    """, unsafe_allowed_html=True)
+    # BLOCAJUL VIZUAL NATIV (Fără riscuri de sintaxă)
+    st.markdown("---")
+    st.warning("🔒 RESTUL RAPORTULUI ESTE BLOCAT")
+    st.info(
+        "Pentru a debloca Top 3 Meserii de Viitor Sigure adaptate profilului tău, "
+        "Planul de Acțiune pe 6 luni și pentru a descărca Raportul Oficial complet în format PDF, "
+        "trimite o contribuție de doar 25 RON prin una dintre metodele de mai jos:\n\n"
+        "• Varianta 1 (Revolut): Trimite 25 RON în contul Revolut la numărul 0736-932-363.\n"
+        "• Varianta 2 (PayPal): Trimite echivalentul în contul PayPal la adresa: anadanieladobre@gmail.com.\n\n"
+        "Cum primești PDF-ul: Imediat ce plata este recepționată, îți vom trimite Raportul PDF complet "
+        "direct pe adresa ta de email sau WhatsApp în maximum 15-30 de minute! Datele tale sunt salvate în siguranță în sistem."
+    )
 
 # 4. Zona Admin: Pentru ca TU să poți extrage PDF-urile plătite
 st.markdown("---")
 st.markdown("### 🗄️ Panou Administrativ (Doar pentru tine)")
 if st.checkbox("Accesează baza de date pentru a trimite PDF-urile plătite"):
     cod_acces = st.text_input("Introdu codul tău de administrator:", type="password")
-    if cod_acces == "parola_ta_secreta": # Modifică parola cu una proprie
+    if cod_acces == "orientareAI26": # Modifică parola cu una proprie
         st.write("Istoricul complet al rapoartelor generate:")
         
         conn = sqlite3.connect("orientare_cariera.db")
