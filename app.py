@@ -22,18 +22,20 @@ st.title("🎓 Orientator Profesional Inteligent")
 st.subheader("Descoperă-ți vocația pentru era viitorului (AI & AGI)")
 st.write("Încarcă diplomele sau desenele tale, iar AI-ul nostru te va ghida spre cariera ideală.")
 
-# 1. Datele utilizatorului
+# 1. Datele utilizatorului (Formular completat de client)
 nume = st.text_input("Numele tău complet:")
+email = st.text_input("Adresa ta de Email (pentru livrarea PDF-ului):")
+telefon = st.text_input("Numărul tău de Telefon / WhatsApp (pentru livrare rapidă):")
 varsta = st.number_input("Vârsta:", min_value=10, max_value=100, value=18)
 descriere = st.text_area("Povestește-ne despre tine (ce pasiuni ai, ce îți place să faci, ce urăști):")
 
-diploma_file = st.file_uploader("Încarcă o diploma sau eseu (PDF, TXT):", type=["pdf", "txt"])
+diploma_file = st.file_uploader("Încarcă o diplomă sau eseu (PDF, TXT):", type=["pdf", "txt"])
 desen_file = st.file_uploader("Încarcă un desen, schiță sau proiect vizual (JPG, PNG):", type=["jpg", "jpeg", "png"])
 
 # 2. Logica la apăsarea butonului de generare
 if st.button("Generează Profilul de Carieră 🚀"):
-    if not nume or not descriere:
-        st.warning("Te rog să completezi cel puțin numele și descrierea personală.")
+    if not nume or not email or not telefon or not descriere:
+        st.warning("Te rog să completezi toate câmpurile obligatorii: nume, email, telefon și descrierea personală.")
     else:
         with st.spinner("Psihosociologul AI îți analizează portofoliul..."):
             try:
@@ -75,16 +77,16 @@ if st.button("Generează Profilul de Carieră 🚀"):
                 )
                 
                 st.session_state.raport_final = response.text
-                # Salvăm automat totul în baza de date locală
-                salveaza_utilizator(nume, varsta, descriere, response.text)
+                # Salvăm automat totul în baza de date locală actualizată
+                salveaza_utilizator(nume, email, telefon, varsta, descriere, response.text)
+                st.success("Analiza a fost generată cu succes!")
                 
             except Exception as e:
                 st.error(f"Eroare tehnică la procesarea AI: {e}")
 
-# 3. STRATEGIA DE MONETIZARE (Nativă și stabilă)
+# 3. STRATEGIA DE MONETIZARE (Ce vede utilizatorul pe ecran)
 if st.session_state.raport_final:
     st.markdown("---")
-    st.success("Analiza inițială a fost finalizată cu succes!")
     
     # Împărțim textul primit de la AI pentru a-i arăta doar prima parte (Mostra gratuită)
     linii_raport = st.session_state.raport_final.split('\n')
@@ -101,49 +103,56 @@ if st.session_state.raport_final:
     st.markdown("### 🧠 Mostră Gratuită: Analiza Psihologică a Profilului Tău")
     st.write("\n".join(mostra_gratuita))
     
-    # BLOCAJUL VIZUAL NATIV (Fără riscuri de sintaxă)
+    # BLOCAJUL VIZUAL NATIV (Paywall-ul comercial automat)
     st.markdown("---")
     st.warning("🔒 RESTUL RAPORTULUI ESTE BLOCAT")
     st.info(
         "Pentru a debloca Top 3 Meserii de Viitor Sigure adaptate profilului tău, "
         "Planul de Acțiune pe 6 luni și pentru a descărca Raportul Oficial complet în format PDF, "
         "trimite o contribuție de doar 25 RON prin una dintre metodele de mai jos:\n\n"
-        "• Varianta 1 (Revolut): Trimite 25 RON în contul Revolut la numărul 0736-932-363.\n"
-        "• Varianta 2 (PayPal): Trimite echivalentul în contul PayPal la adresa: anadanieladobre@gmail.com.\n\n"
-        "Cum primești PDF-ul: Imediat ce plata este recepționată, îți vom trimite Raportul PDF complet "
-        "direct pe adresa ta de email sau WhatsApp în maximum 15-30 de minute! Datele tale sunt salvate în siguranță în sistem."
+        "• Varianta 1 (Revolut): Trimite 25 RON în contul Revolut la numărul de telefon al soției tale.\n"
+        "• Varianta 2 (PayPal): Trimite echivalentul în contul PayPal la adresa de email a soției tale.\n\n"
+        "Cum primești PDF-ul: Imediat ce vedem notificarea ta de plată, îți vom trimite Raportul PDF complet "
+        "direct pe adresa de Email sau pe WhatsApp-ul introduse în formular, în maximum 15-30 de minute!"
     )
 
-# 4. Zona Admin: Pentru ca TU să poți extrage PDF-urile plătite
+# 4. Zona Admin: Pentru ca TU să poți extrage contactele și PDF-urile plătite
 st.markdown("---")
 st.markdown("### 🗄️ Panou Administrativ (Doar pentru tine)")
 if st.checkbox("Accesează baza de date pentru a trimite PDF-urile plătite"):
     cod_acces = st.text_input("Introdu codul tău de administrator:", type="password")
-    if cod_acces == "orientareAI26": # Modifică parola cu una proprie
-        st.write("Istoricul complet al rapoartelor generate:")
+    if cod_acces == "GigiAdmin2026": # Parola ta secretă de admin
+        st.write("Istoricul complet al rapoartelor generate de clienți:")
         
-        conn = sqlite3.connect("orientare_cariera.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, nume, varsta, descriere, raport_ai, data_creare FROM utilizatori ORDER BY id DESC")
-        randuri = cursor.fetchall()
-        conn.close()
+        # Extragem datele complete din tabelul actualizat
+        randuri = extrage_istoric()
         
         if randuri:
             for r in randuri:
-                with st.expander(f"Candidat: {r[1]} ({r[2]} ani) - Data: {r[5]}"):
-                    st.text("Descriere utilizator:")
-                    st.write(r[3])
-                    st.text("Raport Complet generat de AI:")
-                    st.write(r[4])
+                # r[0]=id, r[1]=nume, r[2]=email, r[3]=telefon, r[4]=varsta, r[5]=data_creare
+                with st.expander(f"Candidat: {r[1]} | Email: {r[2]} | Tel: {r[3]} | Data: {r[5]}"):
                     
-                    # Generăm PDF-ul pe loc în panoul tău de admin
-                    pdf_bytes_admin = genereaza_pdf_raport(r[1], r[2], r[4])
-                    st.download_button(
-                        label=f"📥 Descarcă PDF-ul pentru {r[1]}",
-                        data=bytes(pdf_bytes_admin),
-                        file_name=f"Raport_{r[1].replace(' ', '_')}.pdf",
-                        mime="application/pdf",
-                        key=f"btn_{r[0]}"
-                    )
+                    # Conectare rapidă locală pentru a prelua textul complet generat de AI din rândul respectiv
+                    conn = sqlite3.connect("orientare_cariera.db")
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT descriere, raport_ai FROM utilizatori WHERE id = ?", (r[0],))
+                    date_detaliate = cursor.fetchone()
+                    conn.close()
+                    
+                    if date_detaliate:
+                        st.text("Descriere utilizator:")
+                        st.write(date_detaliate[0])
+                        st.text("Raport Complet generat de AI (Meserii + Plan):")
+                        st.write(date_detaliate[1])
+                        
+                        # Generăm PDF-ul pe loc în panoul de admin, preluat din baza de date
+                        pdf_bytes_admin = genereaza_pdf_raport(r[1], r[4], date_detaliate[1])
+                        st.download_button(
+                            label=f"📥 Descarcă PDF-ul complet pentru {r[1]}",
+                            data=bytes(pdf_bytes_admin),
+                            file_name=f"Raport_{r[1].replace(' ', '_')}.pdf",
+                            mime="application/pdf",
+                            key=f"btn_{r[0]}"
+                        )
         else:
             st.info("Baza de date este goală momentan.")
