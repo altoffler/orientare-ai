@@ -105,7 +105,7 @@ if st.session_state.raport_final:
     st.markdown("""
     <div style="background-color:#fff3cd; padding:20px; border-radius:10px; border-left: 6px solid #ffc107; margin-top:20px;">
         <h4 style="color:#856404; margin-top:0;">🔒 RESTUL RAPORTULUI ESTE BLOCAT</h4>
-        <p style="color:#856404;">Pentru a debloca <b>Top 3 Meserii de Viitor Sigure</b> adaptate profilului tău, <b>Planul de Acțiune pe 6 luni</b> și pentru a descărca <b>Raportul Oficial complet în format PDF</b>, trimite o contribuție de doar <b>25 RON</b> prin una dintre metodele de mai jos:</p>
+        <p style="color:#856404;">Pour a debloca <b>Top 3 Meserii de Viitor Sigure</b> adaptate profilului tău, <b>Planul de Acțiune pe 6 luni</b> și pentru a descărca <b>Raportul Oficial complet în format PDF</b>, trimite o contribuție de doar <b>25 RON</b> prin una dintre metodele de mai jos:</p>
         <ul>
             <li><b>Varianta 1 (Revolut):</b> Trimite 25 RON în contul Revolut la numărul <code>07XX-XXX-XXX</code>. La detalii plată scrie obligatoriu numele tău din aplicație.</li>
             <li><b>Varianta 2 (PayPal):</b> Trimite echivalentul în contul PayPal la adresa: <code>email_sotie@gmail.com</code>.</li>
